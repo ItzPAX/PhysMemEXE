@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="drv">
+      <UniqueIdentifier>{9ad6d902-bd68-4393-9c4b-ef690fd6af96}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="drv.cpp">
+      <Filter>drv</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="drv.h">
+      <Filter>drv</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
