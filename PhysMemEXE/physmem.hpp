@@ -1,4 +1,4 @@
-#include "drv.h"
+#include "includes.h"
 #include <iostream>
 #include <unordered_map>
 
@@ -6,20 +6,17 @@ class physmem
 {
 public:
 	std::unordered_map<uint64_t, uint64_t> pdpt_page_table;
-	wnbios_lib lib;
 
 public:
-	physmem(uint64_t gb_to_map)
+	physmem(const wchar_t* process, uint64_t gb_to_map, HANDLE winio, HANDLE intel)
 	{
-		lib.attach("PhysMemEXE.exe");
+		EPROCESS_DATA data = drv_utils::get_eprocess(intel, process);
 
 		for (int i = 0; i < gb_to_map; i++)
 		{
-			uintptr_t huge_page_virt = lib.insert_custom_pdpte(i);
+			uintptr_t huge_page_virt = winio_driver::insert_custom_pdpte(winio, i, data.directory_table);
 			pdpt_page_table[i] = huge_page_virt;
 		}
-
-		lib.~wnbios_lib();
 	}
 
 	uintptr_t get_local_virt_from_phys(uintptr_t phys)
