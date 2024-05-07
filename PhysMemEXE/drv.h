@@ -1614,6 +1614,7 @@ public:
 			exit(5000);
 	}
 	~wnbios_lib() {
+		std::cout << "unloading...\n";
 		CloseHandle(hHandle);
 		stop_service();
 		delete_service();

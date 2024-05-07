@@ -4,6 +4,9 @@
     <Filter Include="drv">
       <UniqueIdentifier>{9ad6d902-bd68-4393-9c4b-ef690fd6af96}</UniqueIdentifier>
     </Filter>
+    <Filter Include="physmem">
+      <UniqueIdentifier>{2281e453-3f8f-42f4-bb3c-7f851d6914fd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="drv.cpp">
@@ -14,6 +17,9 @@
   <ItemGroup>
     <ClInclude Include="drv.h">
       <Filter>drv</Filter>
+    </ClInclude>
+    <ClInclude Include="physmem.hpp">
+      <Filter>physmem</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
