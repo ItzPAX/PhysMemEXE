@@ -134,6 +134,7 @@
     <ClCompile Include="drv_utils.cpp" />
     <ClCompile Include="intel_driver.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="physmem.cpp" />
     <ClCompile Include="portable_executable.cpp" />
     <ClCompile Include="service.cpp" />
     <ClCompile Include="utils.cpp" />

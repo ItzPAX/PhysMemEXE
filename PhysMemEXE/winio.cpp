@@ -267,9 +267,6 @@ uintptr_t winio_driver::insert_custom_pdpte(HANDLE driver_handle, uint64_t pfn, 
 	PAGE_DATA pml4e_data = valid_pml4e(driver_handle, dtb);
 	PAGE_DATA pdpte_data = free_pdpte(driver_handle, pml4e_data.pfn * 0x1000);
 
-	std::cout << "PML4E: " << std::dec << pml4e_data.index << "\n" <<
-		"PDPTE: " << pdpte_data.index << "\n";
-
 	PDPTE pdpte;
 	pdpte.Present = 1;
 	pdpte.ExecuteDisable = 1;
@@ -279,6 +276,8 @@ uintptr_t winio_driver::insert_custom_pdpte(HANDLE driver_handle, uint64_t pfn, 
 	pdpte.UserSupervisor = 1;
 
 	uintptr_t pdpte_phys = (pml4e_data.pfn * 0x1000) + (pdpte_data.index * sizeof(uintptr_t));
+
+	Log(L"[*] Inserting custom PDPTE | PFN:" << std::hex << pfn << "[0x" << pdpte_phys << "]\n" << std::dec);
 
 	WritePhysicalMemory(driver_handle, pdpte_phys, (uint8_t*)&pdpte, sizeof(PDPTE));
 

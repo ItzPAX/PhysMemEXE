@@ -36,16 +36,16 @@ int wmain(const int argc, wchar_t** argv)
 		Log(L"[-] Warning failed to fully unload vulnerable driver " << std::endl);
 	}
 
+	Log(L"[+] PhysmemEXE initialized :)\n");
 
-	byte buf[0x1000];
-	
-	while (true)
+	//auto e = physmem.attach(L"explorer.exe");
+	//std::cout << e.base << std::endl << e.directory_table << std::endl << e.pid << std::endl;
+
+	byte buf[0x100];
+	physmem.read_physical_memory(0x3FFFED00, buf, 0x100);
+	for (int i = 0; i < 0x100; i++)
 	{
-		physmem.read_physical_memory(0x1ad000, buf, 0x1000);
-		for (int i = 0; i < 0x1000; i++)
-			std::cout << std::hex << (int)buf[i] << std::endl;
-	
-		Sleep(1);
+		std::cout << std::hex << (int)buf[i] << std::endl;
 	}
 
 	system("pause");

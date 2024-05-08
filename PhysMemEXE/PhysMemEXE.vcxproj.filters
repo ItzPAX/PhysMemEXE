@@ -31,6 +31,9 @@
     <ClCompile Include="winio.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="physmem.cpp">
+      <Filter>physmem</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="physmem.hpp">
