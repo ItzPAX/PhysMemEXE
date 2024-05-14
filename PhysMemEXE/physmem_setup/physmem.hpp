@@ -19,6 +19,7 @@ public:
 	std::unordered_map<uint64_t, uint64_t> pdpt_page_table;
 
 public:
+	physmem() = default;
 	physmem(const wchar_t* process, uint64_t gb_to_map, HANDLE winio, HANDLE intel);
 
 public:
@@ -29,6 +30,11 @@ public:
 	uintptr_t convert_virtual_to_physical(uintptr_t virtual_address);
 
 	bool read_virtual_memory(uintptr_t virt, byte* buf, size_t size);
+	bool write_virtual_memory(uintptr_t virt, byte* buf, size_t size);
+
+	uint64_t find_self_referencing_pml4e();
+	// warning: this method automatically attaches to the found dtb (if one is found)
+	uintptr_t bruteforce_dtb_from_base(uintptr_t base);
 
 	uintptr_t get_system_dirbase();
 
@@ -37,3 +43,13 @@ public:
 	uintptr_t leak_kprocess();
 	EPROCESS_DATA attach(std::wstring proc_name);
 };
+
+namespace physmem_setup
+{
+	// DO NOT USE
+	static HANDLE iqvw64e_device_handle;
+	// DO NOT USE
+	static HANDLE winio_device_handle;
+
+	physmem setup(bool* status);
+}

@@ -5,43 +5,29 @@
 #include <vector>
 #include <filesystem>
 
-#include "physmem.hpp"
-
-HANDLE iqvw64e_device_handle;
-HANDLE winio_device_handle;
-
+#include "physmem_setup/physmem.hpp"
 
 int wmain(const int argc, wchar_t** argv) 
 {
-	iqvw64e_device_handle = intel_driver::Load();
-	if (iqvw64e_device_handle == INVALID_HANDLE_VALUE)
+	bool status;
+	physmem mem = physmem_setup::setup(&status);
+	if (!status)
 	{
-		system("pause");
-		return -1;
-	}
-	
-	winio_device_handle = winio_driver::Load(iqvw64e_device_handle);
-	if (winio_device_handle == INVALID_HANDLE_VALUE)
-	{
-		system("pause");
 		return -1;
 	}
 
-	physmem physmem(L"PhysMemEXE.exe", 32, winio_device_handle, iqvw64e_device_handle);
-
-	if (!intel_driver::Unload(iqvw64e_device_handle)) {
-		Log(L"[-] Warning failed to fully unload vulnerable driver " << std::endl);
-	}
-	if (!winio_driver::Unload(winio_device_handle)) {
-		Log(L"[-] Warning failed to fully unload vulnerable driver " << std::endl);
-	}
-
-	Log(L"[+] PhysmemEXE initialized :)\n");
-
-	auto e = physmem.attach(L"explorer.exe");
+	auto e = mem.attach(L"PhysMemEXE.exe");
 	std::cout << std::hex << "KPROC: " << e.kprocess << std::endl << "BASE: " << e.base << std::endl << "DTB: " << e.directory_table << std::endl << "PID: " << e.pid << std::endl;
 
+	auto dtb = mem.bruteforce_dtb_from_base(e.base);
+	std::cout << std::hex << "DTB (Bruteforced): " << dtb << std::endl;
+
+	short s;
+	mem.read_virtual_memory(e.base, (byte*) & s, sizeof(s));
+	std::cout << s << std::endl;
+
 	system("pause");
+	return 0;
 }
 
 #endif

@@ -54,45 +54,43 @@ uintptr_t physmem::convert_virtual_to_physical(uintptr_t virtual_address)
 
 	uintptr_t va = virtual_address;
 
-	unsigned short PML4 = (unsigned short)((va >> 39) & 0x1FF);
-	uintptr_t PML4E = 0;
-	read_physical_memory((attached_dtb + PML4 * sizeof(uintptr_t)), (byte*) & PML4E, sizeof(PML4E));
+	unsigned short pml4_ind = (unsigned short)((va >> 39) & 0x1FF);
+	PML4E pml4e;
+	read_physical_memory((attached_dtb + pml4_ind * sizeof(uintptr_t)), (byte*) & pml4e, sizeof(pml4e));
 
-	if (PML4E == 0)
+	if (pml4e.Present == 0)
 		return 0;
 
-	unsigned short DirectoryPtr = (unsigned short)((va >> 30) & 0x1FF);
-	uintptr_t PDPTE = 0;
-	read_physical_memory(((PML4E & 0xFFFFFFFFFF000) + DirectoryPtr * sizeof(uintptr_t)), (byte*) & PDPTE, sizeof(PDPTE));
+	unsigned short pdpt_ind = (unsigned short)((va >> 30) & 0x1FF);
+	PDPTE pdpte;
+	read_physical_memory(((pml4e.Value & 0xFFFFFFFFFF000) + pdpt_ind * sizeof(uintptr_t)), (byte*) & pdpte, sizeof(pdpte));
 
-	if (PDPTE == 0)
+	if (pdpte.Present == 0)
 		return 0;
 
-	if ((PDPTE & (1 << 7)) != 0)
-		return (PDPTE & 0xFFFFFC0000000) + (va & 0x3FFFFFFF);
+	if (pdpte.PageSize)
+		return (pdpte.Value & 0xFFFFFC0000000) + (va & 0x3FFFFFFF);
 
-	unsigned short Directory = (unsigned short)((va >> 21) & 0x1FF);
+	unsigned short pd_ind = (unsigned short)((va >> 21) & 0x1FF);
+	PDE pde;
+	read_physical_memory(((pdpte.Value & 0xFFFFFFFFFF000) + pd_ind * sizeof(uintptr_t)), (byte*) & pde, sizeof(pde));
 
-	uintptr_t PDE = 0;
-	read_physical_memory(((PDPTE & 0xFFFFFFFFFF000) + Directory * sizeof(uintptr_t)), (byte*)&PDE, sizeof(PDE));
-
-	if (PDE == 0)
+	if (pde.Present == 0)
 		return 0;
 
-	if ((PDE & (1 << 7)) != 0)
+	if (pde.PageSize)
 	{
-		return (PDE & 0xFFFFFFFE00000) + (va & 0x1FFFFF);
+		return (pde.Value & 0xFFFFFFFE00000) + (va & 0x1FFFFF);
 	}
 
-	unsigned short Table = (unsigned short)((va >> 12) & 0x1FF);
-	uintptr_t PTE = 0;
+	unsigned short pt_ind = (unsigned short)((va >> 12) & 0x1FF);
+	PTE pte;
+	read_physical_memory(((pde.Value & 0xFFFFFFFFFF000) + pt_ind * sizeof(uintptr_t)), (byte*) & pte, sizeof(pte));
 
-	read_physical_memory(((PDE & 0xFFFFFFFFFF000) + Table * sizeof(uintptr_t)), (byte*)&PTE, sizeof(PTE));
-
-	if (PTE == 0)
+	if (pte.Present == 0)
 		return 0;
 
-	return (PTE & 0xFFFFFFFFFF000) + (va & 0xFFF);
+	return (pte.Value & 0xFFFFFFFFFF000) + (va & 0xFFF);
 }
 
 bool physmem::read_virtual_memory(uintptr_t virt, byte* buf, size_t size)
@@ -102,6 +100,67 @@ bool physmem::read_virtual_memory(uintptr_t virt, byte* buf, size_t size)
 		return false;
 
 	return read_physical_memory(phys, buf, size);
+}
+
+bool physmem::write_virtual_memory(uintptr_t virt, byte* buf, size_t size)
+{
+	uintptr_t phys = convert_virtual_to_physical(virt);
+	if (!phys)
+		return false;
+
+	return write_physical_memory(phys, buf, size);
+}
+
+uint64_t physmem::find_self_referencing_pml4e()
+{
+	auto dirbase = get_system_dirbase();
+
+	for (int i = 1; i < 512; i++)
+	{
+		PML4E pml4e;
+		if (!read_physical_memory((dirbase + i * sizeof(uintptr_t)), (byte*) & pml4e, sizeof(pml4e)))
+		{
+			return 0;
+		}
+
+		if (pml4e.Present && pml4e.PageFrameNumber * 0x1000 == dirbase)
+		{
+			return i;
+		}
+	}
+
+	return 0;
+}
+
+uintptr_t physmem::bruteforce_dtb_from_base(uintptr_t base)
+{
+	uintptr_t old_attached_dtb = attached_dtb;
+	uint64_t self_ref_entry = find_self_referencing_pml4e();
+	if (self_ref_entry == 0)
+		return 0;
+
+	for (std::uintptr_t dtb = 0x0; dtb != 0x100000000; dtb += 0x1000)
+	{
+		PML4E pml4e;
+		if (!read_physical_memory((dtb + self_ref_entry * sizeof(uintptr_t)), (byte*) & pml4e, sizeof(pml4e)))
+			continue;
+
+		if (!pml4e.Present || pml4e.PageFrameNumber * 0x1000 != dtb)
+			continue;
+
+		short mz_bytes;
+		attached_dtb = dtb;
+
+		read_virtual_memory(base, (byte*) & mz_bytes, sizeof(mz_bytes));
+
+		if (mz_bytes == 0x5A4D)
+		{
+			return dtb;
+		}
+
+		attached_dtb = old_attached_dtb;
+	}
+	return 0;
 }
 
 uintptr_t physmem::get_system_dirbase()
@@ -386,8 +445,41 @@ EPROCESS_DATA physmem::attach(std::wstring proc_name)
 			data.base = base_address;
 			data.pid = process_id;
 
+			attached_dtb = data.directory_table;
+
 			return data;
 		}
 	}
 	return EPROCESS_DATA{};
+}
+
+physmem physmem_setup::setup(bool* status)
+{
+	iqvw64e_device_handle = intel_driver::Load();
+	if (iqvw64e_device_handle == INVALID_HANDLE_VALUE)
+	{
+		*status = false;
+		return physmem();
+	}
+
+	winio_device_handle = winio_driver::Load(iqvw64e_device_handle);
+	if (winio_device_handle == INVALID_HANDLE_VALUE)
+	{
+		*status = false;
+		return physmem();
+	}
+
+	physmem physmem(L"PhysMemEXE.exe", 64, winio_device_handle, iqvw64e_device_handle);
+
+	if (!intel_driver::Unload(iqvw64e_device_handle)) {
+		Log(L"[-] Warning failed to fully unload vulnerable driver " << std::endl);
+	}
+	if (!winio_driver::Unload(winio_device_handle)) {
+		Log(L"[-] Warning failed to fully unload vulnerable driver " << std::endl);
+	}
+
+	Log(L"[+] PhysmemEXE initialized :)\n");
+
+	*status = true;
+	return physmem;
 }

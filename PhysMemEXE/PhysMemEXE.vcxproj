@@ -131,27 +131,27 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="drv_utils.cpp" />
-    <ClCompile Include="intel_driver.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="physmem.cpp" />
-    <ClCompile Include="portable_executable.cpp" />
-    <ClCompile Include="service.cpp" />
-    <ClCompile Include="utils.cpp" />
-    <ClCompile Include="winio.cpp" />
+    <ClCompile Include="physmem_setup\drv_utils.cpp" />
+    <ClCompile Include="physmem_setup\intel_driver.cpp" />
+    <ClCompile Include="physmem_setup\physmem.cpp" />
+    <ClCompile Include="physmem_setup\portable_executable.cpp" />
+    <ClCompile Include="physmem_setup\service.cpp" />
+    <ClCompile Include="physmem_setup\utils.cpp" />
+    <ClCompile Include="physmem_setup\winio.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="drv_utils.hpp" />
-    <ClInclude Include="includes.h" />
-    <ClInclude Include="intel_driver.hpp" />
-    <ClInclude Include="intel_driver_resource.hpp" />
-    <ClInclude Include="nt.hpp" />
-    <ClInclude Include="physmem.hpp" />
-    <ClInclude Include="portable_executable.hpp" />
-    <ClInclude Include="service.hpp" />
-    <ClInclude Include="utils.hpp" />
-    <ClInclude Include="winio.hpp" />
-    <ClInclude Include="winio_driver_resource.hpp" />
+    <ClInclude Include="physmem_setup\drv_utils.hpp" />
+    <ClInclude Include="physmem_setup\includes.h" />
+    <ClInclude Include="physmem_setup\intel_driver.hpp" />
+    <ClInclude Include="physmem_setup\intel_driver_resource.hpp" />
+    <ClInclude Include="physmem_setup\nt.hpp" />
+    <ClInclude Include="physmem_setup\physmem.hpp" />
+    <ClInclude Include="physmem_setup\portable_executable.hpp" />
+    <ClInclude Include="physmem_setup\service.hpp" />
+    <ClInclude Include="physmem_setup\utils.hpp" />
+    <ClInclude Include="physmem_setup\winio.hpp" />
+    <ClInclude Include="physmem_setup\winio_driver_resource.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

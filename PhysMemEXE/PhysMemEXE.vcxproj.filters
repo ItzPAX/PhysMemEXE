@@ -1,73 +1,76 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="physmem">
+    <Filter Include="physmem_setup">
+      <UniqueIdentifier>{a10f5cca-a2d9-4551-8156-65b61c19e56d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="physmem_setup\physmem">
       <UniqueIdentifier>{2281e453-3f8f-42f4-bb3c-7f851d6914fd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="header">
-      <UniqueIdentifier>{1b397b35-e199-48b6-8be3-30255718b098}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="source">
+    <Filter Include="physmem_setup\source">
       <UniqueIdentifier>{bc003734-f3fc-4b68-b17c-c95f2fc9be26}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="physmem_setup\header">
+      <UniqueIdentifier>{1b397b35-e199-48b6-8be3-30255718b098}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="intel_driver.cpp">
-      <Filter>source</Filter>
+    <ClCompile Include="physmem_setup\physmem.cpp">
+      <Filter>physmem_setup\physmem</Filter>
     </ClCompile>
-    <ClCompile Include="portable_executable.cpp">
-      <Filter>source</Filter>
+    <ClCompile Include="physmem_setup\drv_utils.cpp">
+      <Filter>physmem_setup\source</Filter>
     </ClCompile>
-    <ClCompile Include="service.cpp">
-      <Filter>source</Filter>
+    <ClCompile Include="physmem_setup\intel_driver.cpp">
+      <Filter>physmem_setup\source</Filter>
     </ClCompile>
-    <ClCompile Include="utils.cpp">
-      <Filter>source</Filter>
+    <ClCompile Include="physmem_setup\portable_executable.cpp">
+      <Filter>physmem_setup\source</Filter>
     </ClCompile>
-    <ClCompile Include="drv_utils.cpp">
-      <Filter>source</Filter>
+    <ClCompile Include="physmem_setup\service.cpp">
+      <Filter>physmem_setup\source</Filter>
     </ClCompile>
-    <ClCompile Include="winio.cpp">
-      <Filter>source</Filter>
+    <ClCompile Include="physmem_setup\utils.cpp">
+      <Filter>physmem_setup\source</Filter>
     </ClCompile>
-    <ClCompile Include="physmem.cpp">
-      <Filter>physmem</Filter>
+    <ClCompile Include="physmem_setup\winio.cpp">
+      <Filter>physmem_setup\source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="physmem.hpp">
-      <Filter>physmem</Filter>
+    <ClInclude Include="physmem_setup\drv_utils.hpp">
+      <Filter>physmem_setup\header</Filter>
     </ClInclude>
-    <ClInclude Include="includes.h">
-      <Filter>header</Filter>
+    <ClInclude Include="physmem_setup\includes.h">
+      <Filter>physmem_setup\header</Filter>
     </ClInclude>
-    <ClInclude Include="intel_driver.hpp">
-      <Filter>header</Filter>
+    <ClInclude Include="physmem_setup\intel_driver.hpp">
+      <Filter>physmem_setup\header</Filter>
     </ClInclude>
-    <ClInclude Include="intel_driver_resource.hpp">
-      <Filter>header</Filter>
+    <ClInclude Include="physmem_setup\intel_driver_resource.hpp">
+      <Filter>physmem_setup\header</Filter>
     </ClInclude>
-    <ClInclude Include="nt.hpp">
-      <Filter>header</Filter>
+    <ClInclude Include="physmem_setup\nt.hpp">
+      <Filter>physmem_setup\header</Filter>
     </ClInclude>
-    <ClInclude Include="portable_executable.hpp">
-      <Filter>header</Filter>
+    <ClInclude Include="physmem_setup\portable_executable.hpp">
+      <Filter>physmem_setup\header</Filter>
     </ClInclude>
-    <ClInclude Include="service.hpp">
-      <Filter>header</Filter>
+    <ClInclude Include="physmem_setup\service.hpp">
+      <Filter>physmem_setup\header</Filter>
     </ClInclude>
-    <ClInclude Include="utils.hpp">
-      <Filter>header</Filter>
+    <ClInclude Include="physmem_setup\utils.hpp">
+      <Filter>physmem_setup\header</Filter>
     </ClInclude>
-    <ClInclude Include="winio.hpp">
-      <Filter>header</Filter>
+    <ClInclude Include="physmem_setup\winio.hpp">
+      <Filter>physmem_setup\header</Filter>
     </ClInclude>
-    <ClInclude Include="winio_driver_resource.hpp">
-      <Filter>header</Filter>
+    <ClInclude Include="physmem_setup\winio_driver_resource.hpp">
+      <Filter>physmem_setup\header</Filter>
     </ClInclude>
-    <ClInclude Include="drv_utils.hpp">
-      <Filter>header</Filter>
+    <ClInclude Include="physmem_setup\physmem.hpp">
+      <Filter>physmem_setup\physmem</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
