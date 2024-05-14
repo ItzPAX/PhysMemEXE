@@ -151,6 +151,8 @@ uint64_t physmem::find_self_referencing_pml4e()
 
 uintptr_t physmem::bruteforce_dtb_from_base(uintptr_t base)
 {
+	return 0;
+
 	uintptr_t old_attached_dtb = attached_dtb;
 	uint64_t self_ref_entry = find_self_referencing_pml4e();
 	if (self_ref_entry == 0)
