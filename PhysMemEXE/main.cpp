@@ -38,15 +38,8 @@ int wmain(const int argc, wchar_t** argv)
 
 	Log(L"[+] PhysmemEXE initialized :)\n");
 
-	//auto e = physmem.attach(L"explorer.exe");
-	//std::cout << e.base << std::endl << e.directory_table << std::endl << e.pid << std::endl;
-
-	byte buf[0x100];
-	physmem.read_physical_memory(0x3FFFED00, buf, 0x100);
-	for (int i = 0; i < 0x100; i++)
-	{
-		std::cout << std::hex << (int)buf[i] << std::endl;
-	}
+	auto e = physmem.attach(L"explorer.exe");
+	std::cout << e.base << std::endl << e.directory_table << std::endl << e.pid << std::endl;
 
 	system("pause");
 }

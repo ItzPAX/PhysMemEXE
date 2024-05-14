@@ -270,7 +270,7 @@ uintptr_t winio_driver::insert_custom_pdpte(HANDLE driver_handle, uint64_t pfn, 
 	PDPTE pdpte;
 	pdpte.Present = 1;
 	pdpte.ExecuteDisable = 1;
-	pdpte.PageFrameNumber = pfn;
+	pdpte.PageFrameNumber = (pfn * 0x40000000) / 0x1000;
 	pdpte.PageSize = 1;
 	pdpte.ReadWrite = 1;
 	pdpte.UserSupervisor = 1;

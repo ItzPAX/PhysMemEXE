@@ -17,15 +17,8 @@ uintptr_t physmem::get_local_virt_from_phys(uintptr_t phys)
 {
 	uint64_t page = std::floor(phys / 0x40000000);
 
-
 	uintptr_t local_virt = pdpt_page_table[page];
 	uint64_t offset = phys - (page * 0x40000000);
-
-	//if (page > 0)
-	{
-		std::cout << "PHYS:" << std::hex << phys << std::endl;
-		std::cout << "VA:" << local_virt + offset << std::endl;
-	}
 
 	return local_virt + offset;
 }
