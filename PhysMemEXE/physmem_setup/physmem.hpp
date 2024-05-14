@@ -2,6 +2,8 @@
 #include <iostream>
 #include <unordered_map>
 
+#define PAGES_TO_MAP 32
+
 class physmem
 {
 private:

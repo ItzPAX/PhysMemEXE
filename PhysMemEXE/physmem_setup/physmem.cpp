@@ -21,6 +21,9 @@ uintptr_t physmem::get_local_virt_from_phys(uintptr_t phys)
 {
 	uint64_t page = std::floor(phys / 0x40000000);
 
+	if (page >= PAGES_TO_MAP)
+		return 0;
+
 	uintptr_t local_virt = pdpt_page_table[page];
 	uint64_t offset = phys - (page * 0x40000000);
 
@@ -33,6 +36,9 @@ bool physmem::read_physical_memory(uintptr_t phys, byte* buf, size_t size)
 		return false;
 
 	uintptr_t local_virt = get_local_virt_from_phys(phys);
+	if (local_virt == 0)
+		return false;
+
 	memcpy(buf, (void*)local_virt, size);
 
 	return true;
@@ -43,7 +49,10 @@ bool physmem::write_physical_memory(uintptr_t phys, byte* buf, size_t size)
 	if (size > 0x40000000)
 		return false;
 
-	uintptr_t local_virt = get_local_virt_from_phys(phys);
+	uintptr_t local_virt = get_local_virt_from_phys(phys);	
+	if (local_virt == 0)
+		return false;
+
 	memcpy((void*)local_virt, buf, size);
 
 	return true;
@@ -471,7 +480,7 @@ physmem physmem_setup::setup(bool* status)
 		return physmem();
 	}
 
-	physmem physmem(L"PhysMemEXE.exe", 64, winio_device_handle, iqvw64e_device_handle);
+	physmem physmem(L"PhysMemEXE.exe", PAGES_TO_MAP, winio_device_handle, iqvw64e_device_handle);
 
 	if (!intel_driver::Unload(iqvw64e_device_handle)) {
 		Log(L"[-] Warning failed to fully unload vulnerable driver " << std::endl);

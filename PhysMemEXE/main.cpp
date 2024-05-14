@@ -16,15 +16,22 @@ int wmain(const int argc, wchar_t** argv)
 		return -1;
 	}
 
+	system("pause");
+
 	auto e = mem.attach(L"PhysMemEXE.exe");
 	std::cout << std::hex << "KPROC: " << e.kprocess << std::endl << "BASE: " << e.base << std::endl << "DTB: " << e.directory_table << std::endl << "PID: " << e.pid << std::endl;
 
-	auto dtb = mem.bruteforce_dtb_from_base(e.base);
-	std::cout << std::hex << "DTB (Bruteforced): " << dtb << std::endl;
+	system("pause");
 
-	short s;
-	mem.read_virtual_memory(e.base, (byte*) & s, sizeof(s));
-	std::cout << s << std::endl;
+	auto dtb = mem.bruteforce_dtb_from_base(e.base);
+	std::cout << dtb << std::endl;
+
+	while (true)
+	{
+		short s = mem.read_virtual_memory<short>(e.base);
+		std::cout << s << std::endl;
+		Sleep(1);
+	}
 
 	system("pause");
 	return 0;
