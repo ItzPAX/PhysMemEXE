@@ -32,6 +32,24 @@ public:
 	bool read_virtual_memory(uintptr_t virt, byte* buf, size_t size);
 	bool write_virtual_memory(uintptr_t virt, byte* buf, size_t size);
 
+	template<typename T>
+	T read_virtual_memory(uintptr_t virt)
+	{
+		T buf;
+		if (!read_virtual_memory(virt, (byte*) & buf, sizeof(buf)))
+			return T{};
+		return buf;
+	}
+
+	template<typename T>
+	T write_virtual_memory(uintptr_t virt)
+	{
+		T buf;
+		if (!write_virtual_memory(virt, (byte*) & buf, sizeo(buf)))
+			return T{};
+		return buf;
+	}
+
 	uint64_t find_self_referencing_pml4e();
 	// warning: this method automatically attaches to the found dtb (if one is found)
 	uintptr_t bruteforce_dtb_from_base(uintptr_t base);

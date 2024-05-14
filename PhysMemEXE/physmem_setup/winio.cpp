@@ -277,8 +277,6 @@ uintptr_t winio_driver::insert_custom_pdpte(HANDLE driver_handle, uint64_t pfn, 
 
 	uintptr_t pdpte_phys = (pml4e_data.pfn * 0x1000) + (pdpte_data.index * sizeof(uintptr_t));
 
-	Log(L"[*] Inserting custom PDPTE | PFN:" << std::hex << pfn << "[0x" << pdpte_phys << "]\n" << std::dec);
-
 	WritePhysicalMemory(driver_handle, pdpte_phys, (uint8_t*)&pdpte, sizeof(PDPTE));
 
 	return generate_virtual_address(pml4e_data.index, pdpte_data.index, 0);

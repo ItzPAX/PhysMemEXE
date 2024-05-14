@@ -5,11 +5,13 @@ physmem::physmem(const wchar_t* process, uint64_t gb_to_map, HANDLE winio, HANDL
 	EPROCESS_DATA data = drv_utils::get_eprocess(intel, process);
 
 	Log(L"\n");
+	Log(L"[*] Inserting " << gb_to_map << " PDPTEs...\n");
 	for (int i = 0; i < gb_to_map; i++)
 	{
 		uintptr_t huge_page_virt = winio_driver::insert_custom_pdpte(winio, i, data.directory_table);
 		pdpt_page_table[i] = huge_page_virt;
 	}
+	Log(L"[+] Inserted " << gb_to_map << " PDPTEs!\n");
 	Log(L"\n");
 
 	get_eprocess_offsets();
@@ -478,7 +480,7 @@ physmem physmem_setup::setup(bool* status)
 		Log(L"[-] Warning failed to fully unload vulnerable driver " << std::endl);
 	}
 
-	Log(L"[+] PhysmemEXE initialized :)\n");
+	Log(L"[+] PhysmemEXE initialized :)\n\n");
 
 	*status = true;
 	return physmem;

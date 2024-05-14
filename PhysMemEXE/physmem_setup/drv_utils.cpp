@@ -260,7 +260,6 @@ EPROCESS_DATA drv_utils::get_eprocess(HANDLE intel_handle, std::wstring proc_nam
 	uintptr_t flink = link_start;
 
 	DWORD pid = utils::GetProcessId(proc_name);
-	Log(L"[*] Target PID: " << pid << std::endl);
 
 	for (int a = 0; a < limit; a++)
 	{
@@ -281,7 +280,6 @@ EPROCESS_DATA drv_utils::get_eprocess(HANDLE intel_handle, std::wstring proc_nam
 
 		if (process_id == pid)
 		{
-			printf("target_procid: %d\n", process_id);
 			EPROCESS_DATA data;
 			data.base = kprocess;
 			data.directory_table = directory_table & ~0xF;
