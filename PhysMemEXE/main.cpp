@@ -23,9 +23,6 @@ int wmain(const int argc, wchar_t** argv)
 
 	system("pause");
 
-	auto dtb = mem.bruteforce_dtb_from_base(e.base);
-	std::cout << dtb << std::endl;
-
 	while (true)
 	{
 		short s = mem.read_virtual_memory<short>(e.base);

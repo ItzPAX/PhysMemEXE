@@ -63,18 +63,22 @@ uintptr_t physmem::convert_virtual_to_physical(uintptr_t virtual_address)
 	if (!attached_dtb)
 		return 0;
 
+	attached_dtb = attached_dtb & ~0xf;
+
 	uintptr_t va = virtual_address;
 
 	unsigned short pml4_ind = (unsigned short)((va >> 39) & 0x1FF);
 	PML4E pml4e;
-	read_physical_memory((attached_dtb + pml4_ind * sizeof(uintptr_t)), (byte*) & pml4e, sizeof(pml4e));
+	if (!read_physical_memory((attached_dtb + pml4_ind * sizeof(uintptr_t)), (byte*)&pml4e, sizeof(pml4e)))
+		return 0;
 
 	if (pml4e.Present == 0)
 		return 0;
 
 	unsigned short pdpt_ind = (unsigned short)((va >> 30) & 0x1FF);
 	PDPTE pdpte;
-	read_physical_memory(((pml4e.Value & 0xFFFFFFFFFF000) + pdpt_ind * sizeof(uintptr_t)), (byte*) & pdpte, sizeof(pdpte));
+	if (!read_physical_memory(((pml4e.Value & 0xFFFFFFFFFF000) + pdpt_ind * sizeof(uintptr_t)), (byte*)&pdpte, sizeof(pdpte)))
+		return 0;
 
 	if (pdpte.Present == 0)
 		return 0;
@@ -84,7 +88,8 @@ uintptr_t physmem::convert_virtual_to_physical(uintptr_t virtual_address)
 
 	unsigned short pd_ind = (unsigned short)((va >> 21) & 0x1FF);
 	PDE pde;
-	read_physical_memory(((pdpte.Value & 0xFFFFFFFFFF000) + pd_ind * sizeof(uintptr_t)), (byte*) & pde, sizeof(pde));
+	if (!read_physical_memory(((pdpte.Value & 0xFFFFFFFFFF000) + pd_ind * sizeof(uintptr_t)), (byte*)&pde, sizeof(pde)))
+		return 0;
 
 	if (pde.Present == 0)
 		return 0;
@@ -96,7 +101,8 @@ uintptr_t physmem::convert_virtual_to_physical(uintptr_t virtual_address)
 
 	unsigned short pt_ind = (unsigned short)((va >> 12) & 0x1FF);
 	PTE pte;
-	read_physical_memory(((pde.Value & 0xFFFFFFFFFF000) + pt_ind * sizeof(uintptr_t)), (byte*) & pte, sizeof(pte));
+	if (!read_physical_memory(((pde.Value & 0xFFFFFFFFFF000) + pt_ind * sizeof(uintptr_t)), (byte*)&pte, sizeof(pte)))
+		return 0;
 
 	if (pte.Present == 0)
 		return 0;
@@ -162,7 +168,8 @@ uintptr_t physmem::bruteforce_dtb_from_base(uintptr_t base)
 		short mz_bytes;
 		attached_dtb = dtb;
 
-		read_virtual_memory(base, (byte*) & mz_bytes, sizeof(mz_bytes));
+		if (!read_virtual_memory(base, (byte*)&mz_bytes, sizeof(mz_bytes)))
+			continue;
 
 		if (mz_bytes == 0x5A4D)
 		{
