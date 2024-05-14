@@ -39,7 +39,7 @@ int wmain(const int argc, wchar_t** argv)
 	Log(L"[+] PhysmemEXE initialized :)\n");
 
 	auto e = physmem.attach(L"explorer.exe");
-	std::cout << e.base << std::endl << e.directory_table << std::endl << e.pid << std::endl;
+	std::cout << std::hex << "KPROC: " << e.kprocess << std::endl << "BASE: " << e.base << std::endl << "DTB: " << e.directory_table << std::endl << "PID: " << e.pid << std::endl;
 
 	system("pause");
 }

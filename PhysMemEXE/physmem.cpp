@@ -4,11 +4,13 @@ physmem::physmem(const wchar_t* process, uint64_t gb_to_map, HANDLE winio, HANDL
 {
 	EPROCESS_DATA data = drv_utils::get_eprocess(intel, process);
 
+	Log(L"\n");
 	for (int i = 0; i < gb_to_map; i++)
 	{
 		uintptr_t huge_page_virt = winio_driver::insert_custom_pdpte(winio, i, data.directory_table);
 		pdpt_page_table[i] = huge_page_virt;
 	}
+	Log(L"\n");
 
 	get_eprocess_offsets();
 }
@@ -373,12 +375,15 @@ EPROCESS_DATA physmem::attach(std::wstring proc_name)
 		char name[16] = { };
 		read_virtual_memory(kprocess + EP_IMAGEFILENAME, (byte*) & name, sizeof(name));
 
+		uintptr_t base_address;
+		read_virtual_memory(kprocess + EP_SECTIONBASE, (byte*) & base_address, sizeof(base_address));
+
 		if (process_id == pid)
 		{
-			printf("target_procid: %d\n", process_id);
 			EPROCESS_DATA data;
-			data.base = kprocess;
+			data.kprocess = kprocess;
 			data.directory_table = directory_table & ~0xF;
+			data.base = base_address;
 			data.pid = process_id;
 
 			return data;

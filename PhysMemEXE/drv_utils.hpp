@@ -20,7 +20,7 @@ struct SYSTEM_HANDLE_INFORMATION_EX
 };
 struct EPROCESS_DATA
 {
-	uintptr_t base, directory_table;
+	uintptr_t kprocess, base, directory_table;
 	DWORD pid;
 };
 
