@@ -18,9 +18,13 @@ int wmain(const int argc, wchar_t** argv)
 
 	system("pause");
 
-	auto e = mem.attach(L"TotallyAccurateBattlegrounds.exe");
+	auto e = mem.attach(L"explorer.exe");
 	std::cout << std::hex << "KPROC: " << e.kprocess << std::endl << "BASE: " << e.base << std::endl << "DTB: " << e.directory_table << std::endl << "PID: " << e.pid << std::endl;
 
+	system("pause");
+
+	auto dtb = mem.bruteforce_dtb_from_base(e.base);
+	std::cout << std::hex << dtb << std::endl;
 	system("pause");
 
 	while (true)

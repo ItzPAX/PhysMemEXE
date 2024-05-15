@@ -26,6 +26,8 @@ uintptr_t physmem::get_local_virt_from_phys(uintptr_t phys)
 
 	uintptr_t local_virt = pdpt_page_table[page];
 	uint64_t offset = phys - (page * 0x40000000);
+	if (offset < 0)
+		return 0;
 
 	return local_virt + offset;
 }
@@ -72,7 +74,7 @@ uintptr_t physmem::convert_virtual_to_physical(uintptr_t virtual_address)
 	if (!read_physical_memory((attached_dtb + pml4_ind * sizeof(uintptr_t)), (byte*)&pml4e, sizeof(pml4e)))
 		return 0;
 
-	if (pml4e.Present == 0)
+	if (pml4e.Present == 0 || pml4e.PageSize)
 		return 0;
 
 	unsigned short pdpt_ind = (unsigned short)((va >> 30) & 0x1FF);
@@ -151,17 +153,15 @@ uint64_t physmem::find_self_referencing_pml4e()
 
 uintptr_t physmem::bruteforce_dtb_from_base(uintptr_t base)
 {
-	return 0;
-
 	uintptr_t old_attached_dtb = attached_dtb;
 	uint64_t self_ref_entry = find_self_referencing_pml4e();
 	if (self_ref_entry == 0)
 		return 0;
 
-	for (std::uintptr_t dtb = 0x0; dtb != 0x100000000; dtb += 0x1000)
+	for (std::uintptr_t dtb = 0x100000000; dtb != 0x10000000000; dtb += 0x1000)
 	{
 		PML4E pml4e;
-		if (!read_physical_memory((dtb + self_ref_entry * sizeof(uintptr_t)), (byte*) & pml4e, sizeof(pml4e)))
+		if (!read_physical_memory((dtb + (self_ref_entry * sizeof(uintptr_t))), (byte*) & pml4e, sizeof(pml4e)))
 			continue;
 
 		if (!pml4e.Present || pml4e.PageFrameNumber * 0x1000 != dtb)
@@ -171,13 +171,15 @@ uintptr_t physmem::bruteforce_dtb_from_base(uintptr_t base)
 		attached_dtb = dtb;
 
 		if (!read_virtual_memory(base, (byte*)&mz_bytes, sizeof(mz_bytes)))
+		{
+			attached_dtb = old_attached_dtb;
 			continue;
+		}
 
 		if (mz_bytes == 0x5A4D)
 		{
 			return dtb;
 		}
-
 		attached_dtb = old_attached_dtb;
 	}
 	return 0;
