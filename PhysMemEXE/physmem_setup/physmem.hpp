@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include <Psapi.h>
 
-#define PAGES_TO_MAP 32
+#define PAGES_TO_MAP 128
 
 class physmem
 {

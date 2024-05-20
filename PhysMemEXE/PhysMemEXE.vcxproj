@@ -141,6 +141,7 @@
     <ClCompile Include="physmem_setup\winio.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="overlay\overlay.hpp" />
     <ClInclude Include="physmem_setup\drv_utils.hpp" />
     <ClInclude Include="physmem_setup\includes.h" />
     <ClInclude Include="physmem_setup\intel_driver.hpp" />
