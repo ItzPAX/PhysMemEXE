@@ -1,8 +1,13 @@
 #include "physmem.hpp"
 
-physmem::physmem(const wchar_t* process, uint64_t gb_to_map, HANDLE winio, HANDLE intel)
+physmem::physmem(uint64_t gb_to_map, HANDLE winio, HANDLE intel)
 {
-	EPROCESS_DATA data = drv_utils::get_eprocess(intel, process);
+	wchar_t name[MAX_PATH];
+	GetModuleBaseName(GetCurrentProcess(), NULL, name, MAX_PATH);
+
+	local_process_name = std::wstring(name);
+
+	EPROCESS_DATA data = drv_utils::get_eprocess(intel, local_process_name.c_str());
 
 	Log(L"\n");
 	Log(L"[*] Inserting " << gb_to_map << " PDPTEs...\n");
@@ -468,6 +473,7 @@ EPROCESS_DATA physmem::attach(std::wstring proc_name)
 			data.pid = process_id;
 
 			attached_dtb = data.directory_table;
+			Log(L"[*] Attached to DTB: " << std::hex << attached_dtb << std::endl);
 
 			return data;
 		}
@@ -491,7 +497,7 @@ physmem physmem_setup::setup(bool* status)
 		return physmem();
 	}
 
-	physmem physmem(L"PhysMemEXE.exe", PAGES_TO_MAP, winio_device_handle, iqvw64e_device_handle);
+	physmem physmem(PAGES_TO_MAP, winio_device_handle, iqvw64e_device_handle);
 
 	if (!intel_driver::Unload(iqvw64e_device_handle)) {
 		Log(L"[-] Warning failed to fully unload vulnerable driver " << std::endl);

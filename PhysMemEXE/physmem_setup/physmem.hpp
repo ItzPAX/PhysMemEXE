@@ -1,6 +1,7 @@
 #include "includes.h"
 #include <iostream>
 #include <unordered_map>
+#include <Psapi.h>
 
 #define PAGES_TO_MAP 32
 
@@ -15,14 +16,14 @@ private:
 	uintptr_t EP_IMAGEFILENAME = 0;
 	uintptr_t EP_VADROOT = 0;
 
-	uintptr_t attached_dtb = 0;
-
 public:
+	uintptr_t attached_dtb = 0;
 	std::unordered_map<uint64_t, uint64_t> pdpt_page_table;
+	std::wstring local_process_name;
 
 public:
 	physmem() = default;
-	physmem(const wchar_t* process, uint64_t gb_to_map, HANDLE winio, HANDLE intel);
+	physmem(uint64_t gb_to_map, HANDLE winio, HANDLE intel);
 
 public:
 	uintptr_t get_local_virt_from_phys(uintptr_t phys);
