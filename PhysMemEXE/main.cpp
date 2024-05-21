@@ -5,6 +5,7 @@
 #include <vector>
 #include <filesystem>
 
+#include "physmem_setup/physmem.hpp"
 #include "overlay/overlay.hpp"
 
 int wmain(const int argc, wchar_t** argv) 
@@ -34,7 +35,7 @@ int wmain(const int argc, wchar_t** argv)
 	//	Sleep(1);
 	//}
 
-	overlay::draw(mem);
+	overlay::draw();
 
 	system("pause");
 	return 0;

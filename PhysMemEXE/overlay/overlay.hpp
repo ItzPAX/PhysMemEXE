@@ -2,19 +2,17 @@
 #include <Windows.h>
 #include <iostream>
 #include <string>
-#include <unordered_map>
+#include <psapi.h>
+#include <tlhelp32.h>
 
-#include "../physmem_setup/physmem.hpp"
+#define SystemHandleInformation 16 
+#define STATUS_INFO_LENGTH_MISMATCH ((NTSTATUS)0xC0000004)
 
 namespace overlay
 {
 	namespace communication
 	{
-		/*
-			key = pt index
-			value = physical address
-		*/
-		std::unordered_map<uint64_t, uint64_t> file_physical_address_map;
+		std::wstring mapped_filename;
 
 		typedef struct _Header
 		{
@@ -31,94 +29,177 @@ namespace overlay
 			UINT pte_start;
 			UINT ProcessId;
 			HANDLE File;
-			Header* MappedAddress;
+
+			Header* MappedAddress_External;
+			DWORD MappedAddress_PID;
+			HANDLE ProcessHandle;
 		} ConnectedProcessInfo;
 
-		inline uintptr_t get_pt(uintptr_t virtual_address, physmem& mem)
-		{
-			mem.attached_dtb = mem.attached_dtb & ~0xf;
+		typedef struct _SYSTEM_HANDLE {
+			ULONG ProcessId;
+			BYTE ObjectTypeNumber;
+			BYTE Flags;
+			USHORT Handle;
+			PVOID Object;
+			ACCESS_MASK GrantedAccess;
+		} SYSTEM_HANDLE;
 
-			uintptr_t va = virtual_address;
+		typedef struct _SYSTEM_HANDLE_INFORMATION {
+			ULONG HandleCount;
+			SYSTEM_HANDLE Handles[1];
+		} SYSTEM_HANDLE_INFORMATION;
 
-			unsigned short pml4_ind = (unsigned short)((va >> 39) & 0x1FF);
-			PML4E pml4e;
-			if (!mem.read_physical_memory((mem.attached_dtb + pml4_ind * sizeof(uintptr_t)), (byte*)&pml4e, sizeof(pml4e)))
-				return 0;
+		typedef enum _OBJECT_INFORMATION_CLASS {
+			ObjectBasicInformation,
+			ObjectNameInformation,
+			ObjectTypeInformation,
+			ObjectAllTypesInformation,
+			ObjectHandleInformation
+		} OBJECT_INFORMATION_CLASS;
 
-			if (pml4e.Present == 0 || pml4e.PageSize)
-				return 0;
+		typedef struct _UNICODE_STRING {
+			USHORT Length;
+			USHORT MaximumLength;
+			PWSTR Buffer;
+		} UNICODE_STRING;
 
-			unsigned short pdpt_ind = (unsigned short)((va >> 30) & 0x1FF);
-			PDPTE pdpte;
-			if (!mem.read_physical_memory(((pml4e.Value & 0xFFFFFFFFFF000) + pdpt_ind * sizeof(uintptr_t)), (byte*)&pdpte, sizeof(pdpte)))
-				return 0;
+		typedef struct _OBJECT_NAME_INFORMATION {
+			UNICODE_STRING Name;
+		} OBJECT_NAME_INFORMATION, * POBJECT_NAME_INFORMATION;
 
-			if (pdpte.Present == 0)
-				return 0;
+		typedef NTSTATUS(WINAPI* NTQUERYOBJECT)(HANDLE, OBJECT_INFORMATION_CLASS, PVOID, ULONG, PULONG);
+		using f_RtlAdjustPrivilege = NTSTATUS(NTAPI*)(ULONG, BOOLEAN, BOOLEAN, PBOOLEAN);
+		using f_NtQuerySystemInformation = NTSTATUS(NTAPI*)(ULONG, PVOID, ULONG, PULONG);
 
-			if (pdpte.PageSize)
-				return 0;
 
-			unsigned short pd_ind = (unsigned short)((va >> 21) & 0x1FF);
-			PDE pde;
-			if (!mem.read_physical_memory(((pdpte.Value & 0xFFFFFFFFFF000) + pd_ind * sizeof(uintptr_t)), (byte*)&pde, sizeof(pde)))
-				return 0;
+		BOOL IsFileMappingHandle(HANDLE hProcess, HANDLE hHandle, const std::wstring& mappingName) {
+			// Load NtQueryObject dynamically
+			HMODULE hNtDll = GetModuleHandleW(L"ntdll.dll");
+			if (!hNtDll) return FALSE;
 
-			if (pde.Present == 0)
-				return 0;
+			NTQUERYOBJECT NtQueryObject = (NTQUERYOBJECT)GetProcAddress(hNtDll, "NtQueryObject");
+			if (!NtQueryObject) return FALSE;
 
-			if (pde.PageSize)
-			{
-				return 0;
+			ULONG returnLength = 0;
+			OBJECT_NAME_INFORMATION objectNameInfo;
+			NTSTATUS status = NtQueryObject(hHandle, ObjectNameInformation, &objectNameInfo, sizeof(objectNameInfo), &returnLength);
+
+			if (status == STATUS_INFO_LENGTH_MISMATCH) {
+				std::vector<BYTE> buffer(returnLength);
+				status = NtQueryObject(hHandle, ObjectNameInformation, buffer.data(), returnLength, &returnLength);
+				if (!NT_SUCCESS(status)) return FALSE;
+
+				POBJECT_NAME_INFORMATION pObjectNameInfo = (POBJECT_NAME_INFORMATION)buffer.data();
+				std::wstring objectName(pObjectNameInfo->Name.Buffer, pObjectNameInfo->Name.Length / sizeof(WCHAR));
+
+				if (wcsstr(objectName.c_str(), mappingName.c_str()) != 0)
+				{
+					return TRUE;
+				}
 			}
 
-			return (pde.Value & 0xFFFFFFFFFF000);
+			return FALSE;
 		}
 
-		inline void get_memory_file_physical_info(ConnectedProcessInfo& process_info, physmem& mem)
+		BOOL GetMappedAddress(HANDLE hProcess, HANDLE hFileMapping, void** mappedAddress) 
 		{
-			uintptr_t old = mem.attached_dtb;
-			mem.attach(mem.local_process_name);
-			uintptr_t pt = get_pt((uintptr_t)process_info.MappedAddress, mem);
-			std::cout << "Test: " << std::hex << pt << std::endl;
-			mem.attached_dtb = old;
+			MEMORY_BASIC_INFORMATION mbi;
+			PVOID address = nullptr;
+			SIZE_T returnLength;
 
-			unsigned short pt_ind = (unsigned short)(((uintptr_t)process_info.MappedAddress >> 12) & 0x1FF);
-			
-			std::cout << "PAGE: " << std::floor(pt / 0x40000000) << std::endl;
-
-			for (int index = 0; index < 512; index++)
+			while (VirtualQueryEx(hProcess, address, &mbi, sizeof(mbi)) == sizeof(mbi)) 
 			{
-				PTE pte;
-				mem.read_physical_memory(pt + index * sizeof(uintptr_t), (byte*)&pte, 8);
-				std::cout << std::dec << index << " added: " << std::hex << pte.PageFrameNumber * 0x1000 << std::endl;
+				if (mbi.Type == MEM_MAPPED) 
+				{
+					byte pattern[] = { '\x14','\x00','\x20','\x03' };
+					byte buffer[4];
+
+					ReadProcessMemory(hProcess, mbi.BaseAddress, buffer, sizeof(buffer), NULL);
+					if (!memcmp(pattern, buffer, sizeof(buffer)) && mbi.RegionSize == 0x3201000) // small pattern and page is 50MB
+					{
+						*mappedAddress = mbi.BaseAddress;
+						return TRUE;
+					}
+				}
+				address = (PBYTE)address + mbi.RegionSize;
+			}
+			return FALSE;
+		}
+
+		inline void find_mapping_in_process(ConnectedProcessInfo& processInfo)
+		{
+			HMODULE ntdll = GetModuleHandleA("ntdll");
+			f_RtlAdjustPrivilege RtlAdjustPrivilege = (f_RtlAdjustPrivilege)GetProcAddress(ntdll, "RtlAdjustPrivilege");
+			boolean old_priv;
+			RtlAdjustPrivilege(20, TRUE, FALSE, &old_priv);
+
+			// Take a snapshot of all processes in the system
+			HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+			if (hSnapshot == INVALID_HANDLE_VALUE) {
+				std::cerr << "Failed to take process snapshot" << std::endl;
+				return;
 			}
 
-			std::cout << file_physical_address_map.size() << std::endl;
+			PROCESSENTRY32 pe;
+			pe.dwSize = sizeof(PROCESSENTRY32);
+
+			if (!Process32First(hSnapshot, &pe)) {
+				std::cerr << "Failed to get the first process" << std::endl;
+				CloseHandle(hSnapshot);
+				return;
+			}
+
+			do {
+				// Open the process
+				HANDLE hProcess = OpenProcess(PROCESS_DUP_HANDLE | PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pe.th32ProcessID);
+				if (hProcess == nullptr) {
+					continue;
+				}
+				
+				ULONG handle_info_size = 0x10000;
+				SYSTEM_HANDLE_INFORMATION* handle_info = (SYSTEM_HANDLE_INFORMATION*)malloc(handle_info_size);
+
+				f_NtQuerySystemInformation NtQuerySystemInformation = (f_NtQuerySystemInformation)GetProcAddress(ntdll, "NtQuerySystemInformation");
+
+				while (NtQuerySystemInformation(SystemHandleInformation, handle_info, handle_info_size, NULL) == STATUS_INFO_LENGTH_MISMATCH)
+				{
+					handle_info_size *= 2;
+					handle_info = (SYSTEM_HANDLE_INFORMATION*)realloc(handle_info, handle_info_size);
+				}
+
+				for (ULONG i = 0; i < handle_info->HandleCount; ++i) {
+					SYSTEM_HANDLE& handle = handle_info->Handles[i];
+					if (handle.ProcessId != pe.th32ProcessID) {
+						continue;
+					}
+
+					HANDLE hHandle = (HANDLE)handle.Handle;
+					if (IsFileMappingHandle(hProcess, hHandle, mapped_filename)) {
+						void* mappedAddress = nullptr;
+						if (GetMappedAddress(hProcess, hHandle, &mappedAddress)) {
+							std::cout << "[*] Found DiscordFile in Process: " << pe.th32ProcessID << "\n[*] Mapped to address: " << mappedAddress << std::endl;
+							processInfo.MappedAddress_External = (Header*)mappedAddress;
+							processInfo.MappedAddress_PID = pe.th32ProcessID;
+							CloseHandle(hProcess);
+							CloseHandle(hSnapshot);
+							processInfo.ProcessHandle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, processInfo.MappedAddress_PID);
+							return;
+						}
+					}
+				}
+
+				CloseHandle(hProcess);
+			} while (Process32Next(hSnapshot, &pe));
+
+			CloseHandle(hSnapshot);
+			return;
 		}
 
-		inline bool ConnectToProcess(ConnectedProcessInfo& processInfo, physmem& mem)
+		inline bool ConnectToProcess(ConnectedProcessInfo& processInfo)
 		{
-			std::string mappedFilename = "DiscordOverlay_Framebuffer_Memory_" + std::to_string(processInfo.ProcessId);
-			processInfo.File = OpenFileMappingA(FILE_MAP_ALL_ACCESS, false, mappedFilename.c_str());
-			if (!processInfo.File || processInfo.File == INVALID_HANDLE_VALUE)
-				return false;
+			find_mapping_in_process(processInfo);
 
-			processInfo.MappedAddress = static_cast<Header*>(MapViewOfFile(processInfo.File, FILE_MAP_ALL_ACCESS, 0, 0, 0));
-
-			get_memory_file_physical_info(processInfo, mem);
-
-			std::cout << processInfo.MappedAddress << std::endl;
-			return processInfo.MappedAddress;
-		}
-
-		inline void DisconnectFromProcess(ConnectedProcessInfo& processInfo)
-		{
-			UnmapViewOfFile(processInfo.MappedAddress);
-			processInfo.MappedAddress = nullptr;
-
-			CloseHandle(processInfo.File);
-			processInfo.File = nullptr;
+			return processInfo.MappedAddress_External;
 		}
 
 		inline void SendFrame(ConnectedProcessInfo& processInfo, UINT width, UINT height, void* frame, UINT size)
@@ -127,12 +208,16 @@ namespace overlay
 			// size can be nearly anything since it will get resized
 			// for the screen appropriately, although the maximum size is
 			// game window width * height * 4 (BGRA)
-			processInfo.MappedAddress->Width = width;
-			processInfo.MappedAddress->Height = height;
 
-			memcpy(processInfo.MappedAddress->Buffer, frame, size);
+			WriteProcessMemory(processInfo.ProcessHandle, processInfo.MappedAddress_External + offsetof(Header, Width), &width, sizeof(width), NULL);
+			WriteProcessMemory(processInfo.ProcessHandle, processInfo.MappedAddress_External + offsetof(Header, Height), &height, sizeof(height), NULL);
 
-			processInfo.MappedAddress->FrameCount++; // this will cause the internal module to copy over the framebuffer
+			WriteProcessMemory(processInfo.ProcessHandle, processInfo.MappedAddress_External + offsetof(Header, Buffer), frame, size, NULL);
+
+			UINT old_fc;
+			ReadProcessMemory(processInfo.ProcessHandle, processInfo.MappedAddress_External + offsetof(Header, FrameCount), &old_fc, sizeof(old_fc), NULL);
+			old_fc += 1;
+			WriteProcessMemory(processInfo.ProcessHandle, processInfo.MappedAddress_External + offsetof(Header, FrameCount), &old_fc, sizeof(old_fc), NULL);
 		}
 	}
 
@@ -249,7 +334,7 @@ namespace overlay
 		exit(-1);
 	}
 
-	int draw(physmem& mem)
+	int draw()
 	{
 		printf("[>] Searching for target window...\n");
 		HWND targetWindow = FindWindowA(nullptr, "Clicker Heroes");
@@ -274,14 +359,14 @@ namespace overlay
 
 		printf("[>] Connecting to the process...\n");
 		processInfo.ProcessId = targetProcessId;
-		bool status = communication::ConnectToProcess(processInfo, mem);
+		bool status = communication::ConnectToProcess(processInfo);
 		if (!status)
 		{
 			printf("[!] Failed to connect to the process overlay backend\n");
 			Error();
 		}
 
-		printf("[+] Connected to the process with mapped address 0x%p\n", processInfo.MappedAddress);
+		printf("[+] Connected to the process with mapped address 0x%p\n", processInfo.MappedAddress_External);
 
 		printf("[>] Drawing...\n");
 		drawing::Frame mainFrame = drawing::CreateFrame(1280, 720);
@@ -303,21 +388,21 @@ namespace overlay
 		while (!(GetKeyState(VK_INSERT) & 0x8000))
 		{
 			QueryPerformanceCounter(&t2);
-
+		
 			double deltaTime = (t2.QuadPart - t1.QuadPart) / static_cast<double>(frequency.QuadPart);
 			t1 = t2;
-
+		
 			drawing::CleanFrame(mainFrame);
-
+		
 			drawing::DrawRectangle(mainFrame, static_cast<UINT>(currentPosition), mainFrame.Height / 2 - rectangleHeight / 2, rectangleWidth, rectangleHeight, color);
-
+		
 			currentPosition += direction * speed * deltaTime;
-
+		
 			if (currentPosition + rectangleWidth >= mainFrame.Width)
 				direction = -1;
 			else if (currentPosition <= 0)
 				direction = 1;
-
+		
 			communication::SendFrame(processInfo, mainFrame.Width, mainFrame.Height, mainFrame.Buffer, mainFrame.Size);
 		}
 
