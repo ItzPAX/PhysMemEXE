@@ -163,7 +163,7 @@ uintptr_t physmem::bruteforce_dtb_from_base(uintptr_t base)
 	if (self_ref_entry == 0)
 		return 0;
 
-	for (std::uintptr_t dtb = 0x100000000; dtb != 0x10000000000; dtb += 0x1000)
+	for (std::uintptr_t dtb = 0x1000000000; dtb != 0x100000; dtb -= 0x1000)
 	{
 		PML4E pml4e;
 		if (!read_physical_memory((dtb + (self_ref_entry * sizeof(uintptr_t))), (byte*) & pml4e, sizeof(pml4e)))
