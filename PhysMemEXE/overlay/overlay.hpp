@@ -5,6 +5,8 @@
 #include <psapi.h>
 #include <tlhelp32.h>
 
+#include "../physmem_setup/physmem.hpp"
+
 #define SystemHandleInformation 16 
 #define STATUS_INFO_LENGTH_MISMATCH ((NTSTATUS)0xC0000004)
 
@@ -156,6 +158,9 @@ namespace overlay
 					continue;
 				}
 				
+				if (pe.th32ProcessID == processInfo.ProcessId)
+					continue;
+
 				ULONG handle_info_size = 0x10000;
 				SYSTEM_HANDLE_INFORMATION* handle_info = (SYSTEM_HANDLE_INFORMATION*)malloc(handle_info_size);
 
@@ -202,22 +207,26 @@ namespace overlay
 			return processInfo.MappedAddress_External;
 		}
 
-		inline void SendFrame(ConnectedProcessInfo& processInfo, UINT width, UINT height, void* frame, UINT size)
+		inline void SendFrame(ConnectedProcessInfo& processInfo, UINT width, UINT height, void* frame, UINT size, physmem& mem)
 		{
 			// frame is in B8G8R8A8 format
 			// size can be nearly anything since it will get resized
 			// for the screen appropriately, although the maximum size is
 			// game window width * height * 4 (BGRA)
 
-			WriteProcessMemory(processInfo.ProcessHandle, processInfo.MappedAddress_External + offsetof(Header, Width), &width, sizeof(width), NULL);
-			WriteProcessMemory(processInfo.ProcessHandle, processInfo.MappedAddress_External + offsetof(Header, Height), &height, sizeof(height), NULL);
-
-			WriteProcessMemory(processInfo.ProcessHandle, processInfo.MappedAddress_External + offsetof(Header, Buffer), frame, size, NULL);
-
+			//WriteProcessMemory(processInfo.ProcessHandle, processInfo.MappedAddress_External + offsetof(Header, Width), &width, sizeof(width), NULL);
+			//WriteProcessMemory(processInfo.ProcessHandle, processInfo.MappedAddress_External + offsetof(Header, Height), &height, sizeof(height), NULL);
+			//
+			//WriteProcessMemory(processInfo.ProcessHandle, processInfo.MappedAddress_External + offsetof(Header, Buffer), frame, size, NULL);
+			//
 			UINT old_fc;
-			ReadProcessMemory(processInfo.ProcessHandle, processInfo.MappedAddress_External + offsetof(Header, FrameCount), &old_fc, sizeof(old_fc), NULL);
-			old_fc += 1;
-			WriteProcessMemory(processInfo.ProcessHandle, processInfo.MappedAddress_External + offsetof(Header, FrameCount), &old_fc, sizeof(old_fc), NULL);
+			//ReadProcessMemory(processInfo.ProcessHandle, processInfo.MappedAddress_External + offsetof(Header, FrameCount), &old_fc, sizeof(old_fc), NULL);
+			//old_fc += 1;
+			//WriteProcessMemory(processInfo.ProcessHandle, processInfo.MappedAddress_External + offsetof(Header, FrameCount), &old_fc, sizeof(old_fc), NULL);
+		
+			byte buf[0x1000];
+			memset(buf, 0xFF, 0x1000);
+			mem.write_physical_memory(0x323A1000, buf, sizeof(buf));
 		}
 	}
 
@@ -334,7 +343,7 @@ namespace overlay
 		exit(-1);
 	}
 
-	int draw()
+	int draw(physmem& mem)
 	{
 		printf("[>] Searching for target window...\n");
 		HWND targetWindow = FindWindowA(nullptr, "Clicker Heroes");
@@ -403,7 +412,7 @@ namespace overlay
 			else if (currentPosition <= 0)
 				direction = 1;
 		
-			communication::SendFrame(processInfo, mainFrame.Width, mainFrame.Height, mainFrame.Buffer, mainFrame.Size);
+			communication::SendFrame(processInfo, mainFrame.Width, mainFrame.Height, mainFrame.Buffer, mainFrame.Size, mem);
 		}
 
 		getchar();
