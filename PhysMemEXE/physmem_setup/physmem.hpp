@@ -3,8 +3,6 @@
 #include <unordered_map>
 #include <Psapi.h>
 
-#define PAGES_TO_MAP 64
-
 class physmem
 {
 private:
@@ -15,6 +13,8 @@ private:
 	uintptr_t EP_SECTIONBASE = 0;
 	uintptr_t EP_IMAGEFILENAME = 0;
 	uintptr_t EP_VADROOT = 0;
+
+	int64_t mapped_pages;
 
 public:
 	uintptr_t attached_dtb = 0;
@@ -72,5 +72,5 @@ namespace physmem_setup
 	// DO NOT USE
 	static HANDLE winio_device_handle;
 
-	physmem setup(bool* status);
+	physmem setup(bool* status, int pages_to_map);
 }

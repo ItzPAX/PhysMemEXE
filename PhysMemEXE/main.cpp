@@ -5,12 +5,12 @@
 #include <vector>
 #include <filesystem>
 
-#include "overlay/overlay.hpp"
+#include "physmem_setup/physmem.hpp"
 
 int wmain(const int argc, wchar_t** argv) 
 {
 	bool status;
-	physmem mem = physmem_setup::setup(&status);
+	physmem mem = physmem_setup::setup(&status, 64);
 	if (!status)
 	{
 		return -1;
@@ -23,18 +23,16 @@ int wmain(const int argc, wchar_t** argv)
 	
 	system("pause");
 
-	//auto dtb = mem.bruteforce_dtb_from_base(e.base);
-	//std::cout << std::hex << dtb << std::endl;
-	//system("pause");
-	//
-	//while (true)
-	//{
-	//	short s = mem.read_virtual_memory<short>(e.base);
-	//	std::cout << s << std::endl;
-	//	Sleep(1);
-	//}
-
-	overlay::draw(mem);
+	auto dtb = mem.bruteforce_dtb_from_base(e.base);
+	std::cout << std::hex << dtb << std::endl;
+	system("pause");
+	
+	while (true)
+	{
+		short s = mem.read_virtual_memory<short>(e.base);
+		std::cout << s << std::endl;
+		Sleep(1);
+	}
 
 	system("pause");
 	return 0;

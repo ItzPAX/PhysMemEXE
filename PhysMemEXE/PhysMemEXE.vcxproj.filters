@@ -13,9 +13,6 @@
     <Filter Include="physmem_setup\header">
       <UniqueIdentifier>{1b397b35-e199-48b6-8be3-30255718b098}</UniqueIdentifier>
     </Filter>
-    <Filter Include="overlay">
-      <UniqueIdentifier>{8b5e12cf-ac81-449f-aa4f-a9c09dda5b38}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -75,8 +72,6 @@
     <ClInclude Include="physmem_setup\physmem.hpp">
       <Filter>physmem_setup\physmem</Filter>
     </ClInclude>
-    <ClInclude Include="overlay\overlay.hpp">
-      <Filter>overlay</Filter>
-    </ClInclude>
+    <ClInclude Include="..\physmem.hpp" />
   </ItemGroup>
 </Project>

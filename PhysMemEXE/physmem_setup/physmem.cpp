@@ -2,6 +2,8 @@
 
 physmem::physmem(uint64_t gb_to_map, HANDLE winio, HANDLE intel)
 {
+	mapped_pages = gb_to_map;
+
 	wchar_t name[MAX_PATH];
 	GetModuleBaseName(GetCurrentProcess(), NULL, name, MAX_PATH);
 
@@ -26,7 +28,7 @@ uintptr_t physmem::get_local_virt_from_phys(uintptr_t phys)
 {
 	uint64_t page = std::floor(phys / 0x40000000);
 
-	if (page >= PAGES_TO_MAP)
+	if (page >= mapped_pages)
 		return 0;
 
 	uintptr_t local_virt = pdpt_page_table[page];
@@ -481,7 +483,7 @@ EPROCESS_DATA physmem::attach(std::wstring proc_name)
 	return EPROCESS_DATA{};
 }
 
-physmem physmem_setup::setup(bool* status)
+physmem physmem_setup::setup(bool* status, int pages_to_map)
 {
 	iqvw64e_device_handle = intel_driver::Load();
 	if (iqvw64e_device_handle == INVALID_HANDLE_VALUE)
@@ -497,7 +499,7 @@ physmem physmem_setup::setup(bool* status)
 		return physmem();
 	}
 
-	physmem physmem(PAGES_TO_MAP, winio_device_handle, iqvw64e_device_handle);
+	physmem physmem(pages_to_map, winio_device_handle, iqvw64e_device_handle);
 
 	if (!intel_driver::Unload(iqvw64e_device_handle)) {
 		Log(L"[-] Warning failed to fully unload vulnerable driver " << std::endl);
