@@ -1,10 +1,3 @@
-#ifndef KDLIBMODE
-
-#include <Windows.h>
-#include <string>
-#include <vector>
-#include <filesystem>
-
 #include "physmem_setup/physmem.hpp"
 
 int wmain(const int argc, wchar_t** argv) 
@@ -26,7 +19,7 @@ int wmain(const int argc, wchar_t** argv)
 	auto dtb = mem.bruteforce_dtb_from_base(e.base);
 	std::cout << std::hex << dtb << std::endl;
 	system("pause");
-	
+
 	while (true)
 	{
 		short s = mem.read_virtual_memory<short>(e.base);
@@ -37,5 +30,3 @@ int wmain(const int argc, wchar_t** argv)
 	system("pause");
 	return 0;
 }
-
-#endif

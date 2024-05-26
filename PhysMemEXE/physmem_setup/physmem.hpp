@@ -15,10 +15,10 @@ private:
 	uintptr_t EP_VADROOT = 0;
 
 	int64_t mapped_pages;
+	std::unordered_map<uint64_t, uint64_t> pdpt_page_table;
 
 public:
 	uintptr_t attached_dtb = 0;
-	std::unordered_map<uint64_t, uint64_t> pdpt_page_table;
 	std::wstring local_process_name;
 
 public:
