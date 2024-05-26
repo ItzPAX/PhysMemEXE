@@ -11,7 +11,7 @@ int wmain(const int argc, wchar_t** argv)
 	
 	system("pause");
 	
-	auto e = mem.attach(L"Clicker Heroes.exe");
+	auto e = mem.attach(L"RustClient.exe");
 	std::cout << std::hex << "KPROC: " << e.kprocess << std::endl << "BASE: " << e.base << std::endl << "DTB: " << e.directory_table << std::endl << "PID: " << e.pid << std::endl;
 	
 	system("pause");

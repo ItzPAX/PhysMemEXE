@@ -62,7 +62,9 @@ public:
 	void get_eprocess_offsets();
 	bool leak_kpointers(std::vector<uintptr_t>& pointers);
 	uintptr_t leak_kprocess();
+
 	EPROCESS_DATA attach(std::wstring proc_name);
+	EPROCESS_DATA attach(DWORD pid);
 };
 
 namespace physmem_setup

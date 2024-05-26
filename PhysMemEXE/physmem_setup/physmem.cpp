@@ -483,6 +483,69 @@ EPROCESS_DATA physmem::attach(std::wstring proc_name)
 	return EPROCESS_DATA{};
 }
 
+EPROCESS_DATA physmem::attach(DWORD pid)
+{
+	attached_dtb = get_system_dirbase();
+
+	if (!attached_dtb)
+	{
+		return EPROCESS_DATA{};
+	}
+
+	uintptr_t kprocess_initial = leak_kprocess();
+
+	if (!kprocess_initial)
+	{
+		return EPROCESS_DATA{};
+	}
+
+	Log(L"[*] KPROCESS: " << std::hex << kprocess_initial << std::endl);
+
+	const unsigned long limit = 400;
+
+	uintptr_t link_start = kprocess_initial + EP_ACTIVEPROCESSLINK;
+	uintptr_t flink = link_start;
+
+	for (int a = 0; a < limit; a++)
+	{
+		read_virtual_memory(flink, (byte*)&flink, sizeof(flink));
+
+		uintptr_t kprocess = flink - EP_ACTIVEPROCESSLINK;
+		uintptr_t virtual_size;
+		read_virtual_memory(kprocess + EP_VIRTUALSIZE, (byte*)&virtual_size, sizeof(virtual_size));
+
+		if (virtual_size == 0)
+			continue;
+
+		uintptr_t directory_table;
+		read_virtual_memory(kprocess + EP_DIRECTORYTABLE, (byte*)&directory_table, sizeof(directory_table));
+
+		int process_id = 0;
+		read_virtual_memory(kprocess + EP_UNIQUEPROCESSID, (byte*)&process_id, sizeof(process_id));
+
+		char name[16] = { };
+		read_virtual_memory(kprocess + EP_IMAGEFILENAME, (byte*)&name, sizeof(name));
+
+		uintptr_t base_address;
+		read_virtual_memory(kprocess + EP_SECTIONBASE, (byte*)&base_address, sizeof(base_address));
+
+		if (process_id == pid)
+		{
+			EPROCESS_DATA data;
+			data.kprocess = kprocess;
+			data.directory_table = directory_table & ~0xF;
+			data.base = base_address;
+			data.pid = process_id;
+
+			attached_dtb = data.directory_table;
+			Log(L"[*] Attached to DTB: " << std::hex << attached_dtb << std::endl);
+
+			return data;
+		}
+	}
+	return EPROCESS_DATA{};
+}
+
 physmem physmem_setup::setup(bool* status, int pages_to_map)
 {
 	iqvw64e_device_handle = intel_driver::Load();
