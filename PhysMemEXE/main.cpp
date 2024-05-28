@@ -14,6 +14,9 @@ int wmain(const int argc, wchar_t** argv)
 	auto e = mem.attach(L"RustClient.exe");
 	std::cout << std::hex << "KPROC: " << e.kprocess << std::endl << "BASE: " << e.base << std::endl << "DTB: " << e.directory_table << std::endl << "PID: " << e.pid << std::endl;
 	
+	auto ntdll = mem.get_module_base(L"ntdll.dll");
+	std::cout << ntdll << std::endl;
+
 	system("pause");
 
 	auto dtb = mem.bruteforce_dtb_from_base(e.base);

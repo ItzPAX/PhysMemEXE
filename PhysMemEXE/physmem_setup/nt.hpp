@@ -16,6 +16,23 @@ namespace nt
 	typedef NTSTATUS(*NtUnloadDriver)(PUNICODE_STRING DriverServiceName);
 	typedef NTSTATUS(*RtlAdjustPrivilege)(_In_ ULONG Privilege, _In_ BOOLEAN Enable, _In_ BOOLEAN Client, _Out_ PBOOLEAN WasEnabled);
 
+	// source x64dbg ntdll.h [INCOMPLETE]
+	typedef struct _LDR_DATA_TABLE_ENTRY
+	{
+		LIST_ENTRY InLoadOrderLinks;
+		LIST_ENTRY InMemoryOrderLinks;
+		union
+		{
+			LIST_ENTRY InInitializationOrderLinks;
+			LIST_ENTRY InProgressLinks;
+		};
+		PVOID DllBase;
+		PVOID EntryPoint;
+		ULONG SizeOfImage;
+		UNICODE_STRING FullDllName;
+		UNICODE_STRING BaseDllName;
+	} LDR_DATA_TABLE_ENTRY, * PLDR_DATA_TABLE_ENTRY;
+
 	typedef struct _SYSTEM_HANDLE
 	{
 		PVOID Object;

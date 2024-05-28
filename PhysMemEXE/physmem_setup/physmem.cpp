@@ -243,6 +243,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x498;
 		EP_SECTIONBASE = 0x520;
 		EP_IMAGEFILENAME = 0x5a8;
+		EP_PEB = 0x550;
 		EP_VADROOT = 0x7d8;
 		break;
 	case 22000: //WIN11
@@ -251,6 +252,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x498;
 		EP_SECTIONBASE = 0x520;
 		EP_IMAGEFILENAME = 0x5a8;
+		EP_PEB = 0x550;
 		EP_VADROOT = 0x7d8;
 		break;
 	case 19045: // WIN10_22H2
@@ -259,6 +261,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x498;
 		EP_SECTIONBASE = 0x520;
 		EP_IMAGEFILENAME = 0x5a8;
+		EP_PEB = 0x550;
 		EP_VADROOT = 0x7d8;
 		break;
 	case 19044: //WIN10_21H2
@@ -267,6 +270,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x498;
 		EP_SECTIONBASE = 0x520;
 		EP_IMAGEFILENAME = 0x5a8;
+		EP_PEB = 0x550;
 		EP_VADROOT = 0x7d8;
 		break;
 	case 19043: //WIN10_21H1
@@ -275,6 +279,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x498;
 		EP_SECTIONBASE = 0x520;
 		EP_IMAGEFILENAME = 0x5a8;
+		EP_PEB = 0x550;
 		EP_VADROOT = 0x7d8;
 		break;
 	case 19042: //WIN10_20H2
@@ -283,6 +288,8 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x498;
 		EP_SECTIONBASE = 0x520;
 		EP_IMAGEFILENAME = 0x5a8;
+		EP_PEB = 0x550;
+		EP_VADROOT = 0x7d8;
 		break;
 	case 19041: //WIN10_20H1
 		EP_UNIQUEPROCESSID = 0x440;
@@ -290,6 +297,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x498;
 		EP_SECTIONBASE = 0x520;
 		EP_IMAGEFILENAME = 0x5a8;
+		EP_PEB = 0x550;
 		EP_VADROOT = 0x7d8;
 		break;
 	case 18363: //WIN10_19H2
@@ -298,6 +306,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x340;
 		EP_SECTIONBASE = 0x3c8;
 		EP_IMAGEFILENAME = 0x450;
+		EP_PEB = 0x3f8;
 		EP_VADROOT = 0x658;
 		break;
 	case 18362: //WIN10_19H1
@@ -314,6 +323,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x338;
 		EP_SECTIONBASE = 0x3c0;
 		EP_IMAGEFILENAME = 0x450;
+		EP_PEB = 0x3f8;
 		EP_VADROOT = 0x628;
 		break;
 	case 17134: //WIN10_RS4
@@ -322,6 +332,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x338;
 		EP_SECTIONBASE = 0x3c0;
 		EP_IMAGEFILENAME = 0x450;
+		EP_PEB = 0x3f8;
 		EP_VADROOT = 0x628;
 		break;
 	case 16299: //WIN10_RS3
@@ -330,6 +341,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x338;
 		EP_SECTIONBASE = 0x3c0;
 		EP_IMAGEFILENAME = 0x450;
+		EP_PEB = 0x3f8;
 		EP_VADROOT = 0x628;
 		break;
 	case 15063: //WIN10_RS2
@@ -338,6 +350,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x338;
 		EP_SECTIONBASE = 0x3c0;
 		EP_IMAGEFILENAME = 0x450;
+		EP_PEB = 0x3f8;
 		EP_VADROOT = 0x628;
 		break;
 	case 14393: //WIN10_RS1
@@ -346,6 +359,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x338;
 		EP_SECTIONBASE = 0x3c0;
 		EP_IMAGEFILENAME = 0x450;
+		EP_PEB = 0x3f8;
 		EP_VADROOT = 0x620;
 		break;
 	default:
@@ -475,6 +489,7 @@ EPROCESS_DATA physmem::attach(std::wstring proc_name)
 			data.pid = process_id;
 
 			attached_dtb = data.directory_table;
+			attached_kproc = kprocess;
 			Log(L"[*] Attached to DTB: " << std::hex << attached_dtb << std::endl);
 
 			return data;
@@ -538,6 +553,7 @@ EPROCESS_DATA physmem::attach(DWORD pid)
 			data.pid = process_id;
 
 			attached_dtb = data.directory_table;
+			attached_kproc = kprocess;
 			Log(L"[*] Attached to DTB: " << std::hex << attached_dtb << std::endl);
 
 			return data;
@@ -545,6 +561,54 @@ EPROCESS_DATA physmem::attach(DWORD pid)
 	}
 	return EPROCESS_DATA{};
 }
+
+uintptr_t physmem::get_module_base(std::wstring module_name)
+{
+	get_eprocess_offsets();
+	uintptr_t peb;
+	read_virtual_memory(attached_kproc + EP_PEB, (uint8_t*)&peb, sizeof(uintptr_t));
+
+	uintptr_t pldr;
+	read_virtual_memory(peb + 0x18, (uint8_t*)&pldr, sizeof(uintptr_t));
+
+	_PEB_LDR_DATA ldr;
+	read_virtual_memory(pldr, (uint8_t*)&ldr, sizeof(ldr));
+
+	int limit = 0x100;
+	LIST_ENTRY head = ldr.InMemoryOrderModuleList;
+	LIST_ENTRY flink = head;
+
+	while (limit)
+	{
+		limit--;
+
+		nt::_LDR_DATA_TABLE_ENTRY* pmodule = CONTAINING_RECORD(flink.Flink, nt::_LDR_DATA_TABLE_ENTRY, nt::LDR_DATA_TABLE_ENTRY::InMemoryOrderLinks);
+
+		nt::_LDR_DATA_TABLE_ENTRY mod;
+		read_virtual_memory((uintptr_t)pmodule, (uint8_t*)&mod, sizeof(mod));
+		PWCHAR str = (PWCHAR)malloc(mod.BaseDllName.Length + 2);
+		if (!str)
+			goto exit;
+
+		memset(str, 0, mod.BaseDllName.Length + 2);
+
+		if (!read_virtual_memory((uintptr_t)mod.BaseDllName.Buffer, (uint8_t*)str, mod.BaseDllName.Length))
+			goto exit;
+
+		if (_wcsicmp(module_name.c_str(), str) == 0)
+		{
+			free(str);
+			return (uintptr_t)mod.DllBase;
+		}
+
+	exit:
+		free(str);
+		read_virtual_memory((uintptr_t)flink.Flink, (uint8_t*)&flink, sizeof(LIST_ENTRY));
+	}
+
+	return 0;
+}
+
 
 physmem physmem_setup::setup(bool* status, int pages_to_map)
 {

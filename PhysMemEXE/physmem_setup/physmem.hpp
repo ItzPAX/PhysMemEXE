@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <Psapi.h>
 
+
 class physmem
 {
 private:
@@ -13,12 +14,14 @@ private:
 	uintptr_t EP_SECTIONBASE = 0;
 	uintptr_t EP_IMAGEFILENAME = 0;
 	uintptr_t EP_VADROOT = 0;
+	uintptr_t EP_PEB = 0;
 
 	int64_t mapped_pages;
 	std::unordered_map<uint64_t, uint64_t> pdpt_page_table;
 
 public:
 	uintptr_t attached_dtb = 0;
+	uintptr_t attached_kproc = 0;
 	std::wstring local_process_name;
 
 public:
@@ -65,6 +68,8 @@ public:
 
 	EPROCESS_DATA attach(std::wstring proc_name);
 	EPROCESS_DATA attach(DWORD pid);
+
+	uintptr_t get_module_base(std::wstring module_name);
 };
 
 namespace physmem_setup

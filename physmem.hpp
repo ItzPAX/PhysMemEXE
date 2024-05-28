@@ -85,6 +85,23 @@ namespace nt
 	typedef NTSTATUS(*NtLoadDriver)(PUNICODE_STRING DriverServiceName);
 	typedef NTSTATUS(*NtUnloadDriver)(PUNICODE_STRING DriverServiceName);
 	typedef NTSTATUS(*RtlAdjustPrivilege)(_In_ ULONG Privilege, _In_ BOOLEAN Enable, _In_ BOOLEAN Client, _Out_ PBOOLEAN WasEnabled);
+	
+	// source x64dbg ntdll.h [INCOMPLETE]
+	typedef struct _LDR_DATA_TABLE_ENTRY
+	{
+		LIST_ENTRY InLoadOrderLinks;
+		LIST_ENTRY InMemoryOrderLinks;
+		union
+		{
+			LIST_ENTRY InInitializationOrderLinks;
+			LIST_ENTRY InProgressLinks;
+		};
+		PVOID DllBase;
+		PVOID EntryPoint;
+		ULONG SizeOfImage;
+		UNICODE_STRING FullDllName;
+		UNICODE_STRING BaseDllName;
+	} LDR_DATA_TABLE_ENTRY, * PLDR_DATA_TABLE_ENTRY;
 
 	typedef struct _SYSTEM_HANDLE
 	{
@@ -2619,12 +2636,14 @@ private:
 	uintptr_t EP_SECTIONBASE = 0;
 	uintptr_t EP_IMAGEFILENAME = 0;
 	uintptr_t EP_VADROOT = 0;
+	uintptr_t EP_PEB = 0;
 
 	int64_t mapped_pages;
 	std::unordered_map<uint64_t, uint64_t> pdpt_page_table;
 
 public:
 	uintptr_t attached_dtb = 0;
+	uintptr_t attached_kproc = 0;
 	std::wstring local_process_name;
 
 public:
@@ -2645,7 +2664,7 @@ public:
 	T read_virtual_memory(uintptr_t virt)
 	{
 		T buf;
-		if (!read_virtual_memory(virt, (byte*) & buf, sizeof(buf)))
+		if (!read_virtual_memory(virt, (byte*)&buf, sizeof(buf)))
 			return T{};
 		return buf;
 	}
@@ -2654,7 +2673,7 @@ public:
 	T write_virtual_memory(uintptr_t virt)
 	{
 		T buf;
-		if (!write_virtual_memory(virt, (byte*) & buf, sizeo(buf)))
+		if (!write_virtual_memory(virt, (byte*)&buf, sizeo(buf)))
 			return T{};
 		return buf;
 	}
@@ -2671,6 +2690,8 @@ public:
 
 	EPROCESS_DATA attach(std::wstring proc_name);
 	EPROCESS_DATA attach(DWORD pid);
+
+	uintptr_t get_module_base(std::wstring module_name);
 };
 
 namespace physmem_setup
@@ -2682,6 +2703,8 @@ namespace physmem_setup
 
 	physmem setup(bool* status, int pages_to_map);
 }
+
+/* end of inlined files */
 
 uintptr_t drv_utils::convert_virtual_to_physical(HANDLE winio_handle, uintptr_t virtual_address, uintptr_t cr3)
 {
@@ -4858,7 +4881,7 @@ uintptr_t physmem::bruteforce_dtb_from_base(uintptr_t base)
 	if (self_ref_entry == 0)
 		return 0;
 
-	for (std::uintptr_t dtb = 0x100000000; dtb != 0x10000000000; dtb += 0x1000)
+	for (std::uintptr_t dtb = 0x1000000000; dtb != 0x100000; dtb -= 0x1000)
 	{
 		PML4E pml4e;
 		if (!read_physical_memory((dtb + (self_ref_entry * sizeof(uintptr_t))), (byte*)&pml4e, sizeof(pml4e)))
@@ -4936,6 +4959,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x498;
 		EP_SECTIONBASE = 0x520;
 		EP_IMAGEFILENAME = 0x5a8;
+		EP_PEB = 0x550;
 		EP_VADROOT = 0x7d8;
 		break;
 	case 22000: //WIN11
@@ -4944,6 +4968,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x498;
 		EP_SECTIONBASE = 0x520;
 		EP_IMAGEFILENAME = 0x5a8;
+		EP_PEB = 0x550;
 		EP_VADROOT = 0x7d8;
 		break;
 	case 19045: // WIN10_22H2
@@ -4952,6 +4977,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x498;
 		EP_SECTIONBASE = 0x520;
 		EP_IMAGEFILENAME = 0x5a8;
+		EP_PEB = 0x550;
 		EP_VADROOT = 0x7d8;
 		break;
 	case 19044: //WIN10_21H2
@@ -4960,6 +4986,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x498;
 		EP_SECTIONBASE = 0x520;
 		EP_IMAGEFILENAME = 0x5a8;
+		EP_PEB = 0x550;
 		EP_VADROOT = 0x7d8;
 		break;
 	case 19043: //WIN10_21H1
@@ -4968,6 +4995,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x498;
 		EP_SECTIONBASE = 0x520;
 		EP_IMAGEFILENAME = 0x5a8;
+		EP_PEB = 0x550;
 		EP_VADROOT = 0x7d8;
 		break;
 	case 19042: //WIN10_20H2
@@ -4976,6 +5004,8 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x498;
 		EP_SECTIONBASE = 0x520;
 		EP_IMAGEFILENAME = 0x5a8;
+		EP_PEB = 0x550;
+		EP_VADROOT = 0x7d8;
 		break;
 	case 19041: //WIN10_20H1
 		EP_UNIQUEPROCESSID = 0x440;
@@ -4983,6 +5013,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x498;
 		EP_SECTIONBASE = 0x520;
 		EP_IMAGEFILENAME = 0x5a8;
+		EP_PEB = 0x550;
 		EP_VADROOT = 0x7d8;
 		break;
 	case 18363: //WIN10_19H2
@@ -4991,6 +5022,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x340;
 		EP_SECTIONBASE = 0x3c8;
 		EP_IMAGEFILENAME = 0x450;
+		EP_PEB = 0x3f8;
 		EP_VADROOT = 0x658;
 		break;
 	case 18362: //WIN10_19H1
@@ -5007,6 +5039,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x338;
 		EP_SECTIONBASE = 0x3c0;
 		EP_IMAGEFILENAME = 0x450;
+		EP_PEB = 0x3f8;
 		EP_VADROOT = 0x628;
 		break;
 	case 17134: //WIN10_RS4
@@ -5015,6 +5048,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x338;
 		EP_SECTIONBASE = 0x3c0;
 		EP_IMAGEFILENAME = 0x450;
+		EP_PEB = 0x3f8;
 		EP_VADROOT = 0x628;
 		break;
 	case 16299: //WIN10_RS3
@@ -5023,6 +5057,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x338;
 		EP_SECTIONBASE = 0x3c0;
 		EP_IMAGEFILENAME = 0x450;
+		EP_PEB = 0x3f8;
 		EP_VADROOT = 0x628;
 		break;
 	case 15063: //WIN10_RS2
@@ -5031,6 +5066,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x338;
 		EP_SECTIONBASE = 0x3c0;
 		EP_IMAGEFILENAME = 0x450;
+		EP_PEB = 0x3f8;
 		EP_VADROOT = 0x628;
 		break;
 	case 14393: //WIN10_RS1
@@ -5039,6 +5075,7 @@ void physmem::get_eprocess_offsets()
 		EP_VIRTUALSIZE = 0x338;
 		EP_SECTIONBASE = 0x3c0;
 		EP_IMAGEFILENAME = 0x450;
+		EP_PEB = 0x3f8;
 		EP_VADROOT = 0x620;
 		break;
 	default:
@@ -5168,6 +5205,7 @@ EPROCESS_DATA physmem::attach(std::wstring proc_name)
 			data.pid = process_id;
 
 			attached_dtb = data.directory_table;
+			attached_kproc = kprocess;
 			Log(L"[*] Attached to DTB: " << std::hex << attached_dtb << std::endl);
 
 			return data;
@@ -5231,6 +5269,7 @@ EPROCESS_DATA physmem::attach(DWORD pid)
 			data.pid = process_id;
 
 			attached_dtb = data.directory_table;
+			attached_kproc = kprocess;
 			Log(L"[*] Attached to DTB: " << std::hex << attached_dtb << std::endl);
 
 			return data;
@@ -5238,6 +5277,54 @@ EPROCESS_DATA physmem::attach(DWORD pid)
 	}
 	return EPROCESS_DATA{};
 }
+
+uintptr_t physmem::get_module_base(std::wstring module_name)
+{
+	get_eprocess_offsets();
+	uintptr_t peb;
+	read_virtual_memory(attached_kproc + EP_PEB, (uint8_t*)&peb, sizeof(uintptr_t));
+
+	uintptr_t pldr;
+	read_virtual_memory(peb + 0x18, (uint8_t*)&pldr, sizeof(uintptr_t));
+
+	_PEB_LDR_DATA ldr;
+	read_virtual_memory(pldr, (uint8_t*)&ldr, sizeof(ldr));
+
+	int limit = 0x100;
+	LIST_ENTRY head = ldr.InMemoryOrderModuleList;
+	LIST_ENTRY flink = head;
+
+	while (limit)
+	{
+		limit--;
+
+		nt::_LDR_DATA_TABLE_ENTRY* pmodule = CONTAINING_RECORD(flink.Flink, nt::_LDR_DATA_TABLE_ENTRY, nt::LDR_DATA_TABLE_ENTRY::InMemoryOrderLinks);
+
+		nt::_LDR_DATA_TABLE_ENTRY mod;
+		read_virtual_memory((uintptr_t)pmodule, (uint8_t*)&mod, sizeof(mod));
+		PWCHAR str = (PWCHAR)malloc(mod.BaseDllName.Length + 2);
+		if (!str)
+			goto exit;
+
+		memset(str, 0, mod.BaseDllName.Length + 2);
+
+		if (!read_virtual_memory((uintptr_t)mod.BaseDllName.Buffer, (uint8_t*)str, mod.BaseDllName.Length))
+			goto exit;
+
+		if (_wcsicmp(module_name.c_str(), str) == 0)
+		{
+			free(str);
+			return (uintptr_t)mod.DllBase;
+		}
+
+	exit:
+		free(str);
+		read_virtual_memory((uintptr_t)flink.Flink, (uint8_t*)&flink, sizeof(LIST_ENTRY));
+	}
+
+	return 0;
+}
+
 
 physmem physmem_setup::setup(bool* status, int pages_to_map)
 {
