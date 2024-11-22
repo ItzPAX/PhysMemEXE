@@ -4,7 +4,7 @@ PhysMemEXE is a program that allows your usermode process to gain access to all 
 
 ## How it works
 
-It works by injecting a set amount (n) of pdptes with page frame numbers ranging from 0 to n and the page size bit set to 1 into our process. These pdptes allow us to access all of physical memory as if it was normal virtual memory our process can access
+It works by injecting a set amount (n) of pdptes with page frame numbers ranging from 0 to n and the page size bit set to 1 into our process. These pdptes allow us to access all of physical memory as if it was normal virtual memory our process can access. So basically all of the available physical memory is mapped into one UM process
 
 ## Usage
 
