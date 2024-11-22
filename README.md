@@ -6,6 +6,12 @@ PhysMemEXE is a program that allows your usermode process to gain access to all 
 
 It works by injecting a set amount (n) of pdptes with page frame numbers ranging from 0 to n and the page size bit set to 1 into our process. These pdptes allow us to access all of physical memory as if it was normal virtual memory our process can access. So basically all of the available physical memory is mapped into one UM process
 
+## Features
+- R/W Physical Memory
+- Attach to a process to read virtual memory
+- Bruteforce DTB of a process
+- Get Modules by walking the linked list in the EPROCESS struct
+
 ## Usage
 
 ```cpp
